@@ -26,7 +26,7 @@ def download_input_file(
     return status_code
 
 
-def todays_month_day(padding_target_length: int = 2):
+def todays_month_day(padding_target_length: int = 2) -> str:
     """Return a 0-padded number of the current day of the month.
     Used to get the number of the current date within the advent calendar"""
     return str(datetime.today().date().day).zfill(padding_target_length)
