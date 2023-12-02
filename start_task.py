@@ -50,7 +50,7 @@ if __name__ == "__main__":
     padded_day_str = todays_month_day(2)
     input_url = input_url_from_day(day_str)
     input_path = f"{INPUT_FILES_DIR}{padded_day_str}-input"
-    # download_input_file(input_url, input_path, session_cookie)
+    download_input_file(input_url, input_path, session_cookie)
 
     # open the page with problem description
     webbrowser.open(task_url_from_day(todays_month_day(1)))
