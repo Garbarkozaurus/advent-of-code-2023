@@ -1,13 +1,12 @@
 from datetime import datetime
 import re
+import itertools
 
 import sys
 sys.path.append("../modules/")
 import input_parsing
 
 INPUT_FILES_DIR = "../data/"
-
-# PART 2 not done
 
 
 def todays_month_day(padding_target_length: int = 2) -> str:
@@ -81,10 +80,6 @@ def sum_part_numbers_in_schematic(schematic: list[str]):
     part_sum = 0
     for i in range(len(schematic)):
         part_sum += sum_part_numbers_in_line(i, schematic, width)
-        if i == 126:
-            s_e = number_starts_and_ends(schematic[i])
-            print(schematic[i][s_e[-1][0]:s_e[-1][1]+1])
-            print(schematic[i][128])
     return part_sum
 
 
@@ -104,65 +99,68 @@ def get_part_numbers_in_line(schematic: list[str], line_number: int,
     return part_number_starts_ends
 
 
-def is_asterisk_gear(position: int, line_number: int,
-                     starts_ends: list[list[tuple[int, int]]],
-                     line_len: int) -> bool:
-    found_parts = 0
-    first_second = [[], []]
+def extend_number(line: str, idx: int) -> str:
+    before = ""
+    after = ""
+    for i in range(idx-1, -1, -1):
+        if not line[i].isdigit():
+            break
+        before += line[i]
+    before = before[::-1]
+    for i in range(idx+1, len(line)):
+        if not line[i].isdigit():
+            break
+        after += line[i]
+    return int(f"{before}{line[idx]}{after}"), idx-len(before), idx+len(after)
+
+
+def asterisk_gear_ratio(schematic: list[str], line_number: int, position: int, width: int) -> int:
+    h_neighborhood = (-1, 0, 1)
+    v_neighborhood = (-1, 0, 1)
     if position == 0:
-        # check * line
-        if starts_ends[line_number][0][0] == 1:
-            first_second[found_parts] = starts_ends[line_number][0]
-            found_parts += 1
-        # check previous line
-        if line_number > 0:
-            if starts_ends[line_number-1][0][0] == 0 or \
-            starts_ends[line_number-1][0][0] == 1:
-                first_second[found_parts] = starts_ends[line_number-1][0][0]
-                found_parts += 1
-        # check next line
-        if line_number < len(starts_ends) - 1:
-            if starts_ends[line_number+1][0][0] == 0 or \
-            starts_ends[line_number+1][0][0] == 1:
-                first_second[found_parts] = starts_ends[line_number+1][0][0]
-                found_parts += 1
-    if found_parts == 2:
-        return True, first_second
-    if position == line_len-1:
-        # check * line
-        if starts_ends[line_number][-1][1] == line_len-2:
-            first_second[found_parts] = starts_ends[line_number][-1]
-            found_parts += 1
-        # check previous line
-        if line_number > 0:
-            if starts_ends[line_number-1][-1][1] == line_len-1 or \
-            starts_ends[line_number-1][-1][1] == line_len-2:
-                first_second[found_parts] = starts_ends[line_number-1][-1]
-                found_parts += 1
-        # check next line
-        if line_number < len(starts_ends) - 1:
-            if starts_ends[line_number+1][-1][1] == line_len-1 or \
-            starts_ends[line_number+1][-1][1] == line_len-2:
-                first_second[found_parts] = starts_ends[line_number+1][-1]
-                found_parts += 1
-    if found_parts == 2:
-        return True, first_second
-    pass
-    # part 2 - abandoned
-    return False
+        h_neighborhood = (1, 0)
+    if position == width - 1:
+        h_neighborhood = (0, -1)
+    if line_number == 0:
+        v_neighborhood = (0, 1)
+    if line_number == len(schematic) - 1:
+        v_neighborhood = (-1, 0)
+    # [(x0, y0), (x1, y1)]
+    neighborhood = list(itertools.product(h_neighborhood, v_neighborhood))
+    neighborhood.remove((0, 0))
+    digits_in_neighborhood = []
+    for (x, y) in neighborhood:
+        # being a neighbor of * guarantees for the number to be a part
+        if schematic[line_number+y][position+x].isdigit():
+            digits_in_neighborhood.append((x, y))
+    if len(digits_in_neighborhood) < 2:
+        return 0
+    digits_in_neighborhood.sort(key = lambda x: x[1])  # sort by y ascending
+
+    neighboring_numbers = []
+    neighboring_positions = set()
+    for (x, y) in digits_in_neighborhood:
+        number, start, end = extend_number(schematic[line_number+y], position+x)
+        if (line_number+y, start, end) not in neighboring_positions:
+            neighboring_positions.add((line_number+y, start, end))
+            neighboring_numbers.append(number)
+    if len(neighboring_numbers) == 2:
+        neighboring_numbers = list(neighboring_numbers)
+        return neighboring_numbers[0] * neighboring_numbers[1]
+    return 0
 
 
-def gear_ratios(schematic: list[str]) -> list[int]:
+def sum_of_gear_ratios(schematic: list[str]):
     width = len(schematic[0])
-    all_start_ends = [get_part_numbers_in_line(schematic, i, width)
-                      for i in range(len(schematic))]
-    # handle the first line
-    indexes = [x.start() for x in re.finditer('\*', schematic[0])]
-    # ABANDONING THE 2nd part
-
-
+    gear_ratio_sum = 0
+    for i, line in enumerate(schematic):
+        indices = [x.start() for x in re.finditer('\*', line)]
+        for index in indices:
+            gear_ratio_sum += asterisk_gear_ratio(schematic, i, index, width)
+    return gear_ratio_sum
 
 
 if __name__ == "__main__":
     data = input_parsing.load_list_of_strings("../data/03-input")
-    print(sum_part_numbers_in_schematic(data))
+    print("Sum of all part numbers:", sum_part_numbers_in_schematic(data))
+    print("Sum of all gear ratios:", sum_of_gear_ratios(data))
