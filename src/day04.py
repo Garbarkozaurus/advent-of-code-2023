@@ -1,9 +1,5 @@
 from datetime import datetime
 
-import sys
-sys.path.append("../modules/")
-import input_parsing
-
 INPUT_FILES_DIR = "../data/"
 
 
@@ -42,13 +38,20 @@ def new_cards(line: str, card_number: int) -> list[int]:
     return [card_number+i+1 for i in range(n)]
 
 
-#
-def count_scratchcards(card_pile: list[str]):
-    print(card_pile[0])
-    print(new_cards(card_pile[0], 0))
+def count_scratchcards(card_pile: list[str]) -> int:
+    num_cards = [1] * (len(card_pile) + 1)
+    num_cards[0] = 0  # there is no card number 0
+    for i, card in enumerate(card_pile):
+        winning = winning_cards(card)
+        # print(i+1, f"currently {num_cards[i+1]} copies", "wins", len(winning))
+        for j in range(len(winning)):
+            if i+j+1 < len(num_cards):
+                # print(f"Adding {num_cards[i+1]} to {num_cards[i+j+1]=} {i+j+1=}")
+                num_cards[i+j+2] += num_cards[i+1]
+    return sum(num_cards)
 
 
 if __name__ == "__main__":
-    data = input_parsing.load_list_of_strings(f"{INPUT_FILES_DIR}{todays_month_day(2)}-input")
+    data = open("../data/04-input").readlines()
     print("Sum of card points:", sum([card_points(line) for line in data]))
-    count_scratchcards(data)
+    print("All scratchcard copies:", count_scratchcards(data))
